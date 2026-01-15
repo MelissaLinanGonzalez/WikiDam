@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum ResourceType {
+  VIDEO_YOUTUBE
+  VIDEO_FILE
+  PDF
+  IMAGE
+  LINK
+}
+
+model User {
+  id        String     @id @default(cuid())
+  name      String
+  email     String     @unique
+  password  String
+  role      Role       @default(STUDENT)
+  image     String?
+  createdAt DateTime   @default(now())
+  resources Resource[]
+
+  @@map("users")
+}
+
+model Subject {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?    @db.Text
+  icon        String?
+  color       String?
+  createdAt   DateTime   @default(now())
+  youtubers   Youtuber[]
+  resources   Resource[]
+
+  @@map("subjects")
+}
+
+model Youtuber {
+  id         String     @id @default(cuid())
+  name       String
+  channelUrl String
+  subject    Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId  String
+  resources  Resource[]
+
+  @@map("youtubers")
+}
+
+model Resource {
+  id          String       @id @default(cuid())
+  title       String
+  description String?      @db.Text
+  url         String?
+  filePath    String?
+  type        ResourceType
+  subject     Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId   String
+  youtuber    Youtuber?    @relation(fields: [youtuberId], references: [id], onDelete: SetNull)
+  youtuberId  String?
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  createdAt   DateTime     @default(now())
+
+  @@map("resources")
+}

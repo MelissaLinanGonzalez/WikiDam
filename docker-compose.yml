@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wikidam-app
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=mysql://root:admin123@db:3306/wikidam
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=tu_super_secreto_seguro_cambia_esto_en_produccion
+    volumes:
+      - ./public/uploads:/app/public/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - wikidam-network
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    container_name: wikidam-db
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin123
+      - MYSQL_DATABASE=wikidam
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - wikidam-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-padmin123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+networks:
+  wikidam-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
