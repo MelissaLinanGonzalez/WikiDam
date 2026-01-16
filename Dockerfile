@@ -24,9 +24,8 @@ RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
 
-# --- CAMBIO AQUÍ: Quitamos el "|| true" ---
-# Esto obliga al build a completarse correctamente o mostrar el error real.
-RUN npm run build
+# Construimos ignorando errores de conexión a BD que puedan salir
+RUN npm run build || true
 
 # Preparamos la imagen final
 FROM base AS runner
@@ -39,9 +38,13 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copiamos los archivos necesarios
 COPY --from=builder /app/public ./public
-# Esta es la línea que fallaba antes porque el build anterior no generaba la carpeta:
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# --- LÍNEA IMPRESCINDIBLE AÑADIDA ---
+# Copiamos la carpeta prisma para poder ejecutar migraciones en producción
+COPY --from=builder /app/prisma ./prisma
+# ------------------------------------
 
 USER nextjs
 

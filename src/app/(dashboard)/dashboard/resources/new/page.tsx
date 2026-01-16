@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, FileText, Upload, AlertCircle, X, Youtube, Video, Image, LinkIcon } from 'lucide-react';
 import { ResourceType } from '@prisma/client';
+
 export const dynamic = 'force-dynamic';
 
 interface Subject {
@@ -25,7 +26,8 @@ const resourceTypes = [
     { value: 'LINK', label: 'Enlace', icon: LinkIcon },
 ];
 
-export default function NewResourcePage() {
+// 1. Convertimos tu componente principal en un sub-componente interno
+function NewResourceForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -359,5 +361,14 @@ export default function NewResourcePage() {
                 </form>
             </div>
         </div>
+    );
+}
+
+// 2. Exportamos el componente envuelto en Suspense
+export default function NewResourcePage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center">Cargando formulario...</div>}>
+            <NewResourceForm />
+        </Suspense>
     );
 }

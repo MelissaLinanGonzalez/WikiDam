@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { Youtube, ExternalLink, Plus } from 'lucide-react';
+import DeleteYoutuberButton from '@/components/DeleteYoutuberButton';
+
 export const dynamic = 'force-dynamic';
 
 async function getYoutubers() {
@@ -18,6 +22,8 @@ async function getYoutubers() {
 
 export default async function YoutubersPage() {
     const youtubers = await getYoutubers();
+    const session = await getServerSession(authOptions);
+    const isAdmin = session?.user?.role === 'ADMIN';
 
     return (
         <div className="space-y-6">
@@ -57,6 +63,9 @@ export default async function YoutubersPage() {
                                     {youtuber.subject.name}
                                 </p>
                             </div>
+                            {isAdmin && (
+                                <DeleteYoutuberButton youtuberId={youtuber.id} />
+                            )}
                         </div>
                         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
                             <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -90,3 +99,4 @@ export default async function YoutubersPage() {
         </div>
     );
 }
+

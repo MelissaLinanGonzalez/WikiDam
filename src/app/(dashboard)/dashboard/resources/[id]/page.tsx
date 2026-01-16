@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth'; // <--- NUEVO
+import { authOptions } from '@/lib/auth';     // <--- NUEVO
+import DeleteResourceButton from '@/components/DeleteResourceButton'; // <--- NUEVO
 import { ArrowLeft, Youtube, Video, FileText, Image, LinkIcon, ExternalLink, Download, User, Calendar } from 'lucide-react';
 import { ResourceType } from '@prisma/client';
 
@@ -52,10 +55,16 @@ function getYouTubeEmbedUrl(url: string): string | null {
 export default async function ResourceDetailPage({ params }: PageProps) {
     const { id } = await params;
     const resource = await getResource(id);
+    const session = await getServerSession(authOptions); // <--- Obtenemos sesión
 
     if (!resource) {
         notFound();
     }
+
+    // Lógica de permisos: ¿Es admin O es el dueño?
+    const isAdmin = session?.user?.role === 'ADMIN';
+    const isOwner = session?.user?.id === resource.authorId;
+    const canDelete = isAdmin || isOwner;
 
     const TypeIcon = typeIcons[resource.type];
     const embedUrl = resource.type === 'VIDEO_YOUTUBE' && resource.url
@@ -89,6 +98,11 @@ export default async function ResourceDetailPage({ params }: PageProps) {
                         {resource.title}
                     </h1>
                 </div>
+                
+                {/* --- AQUÍ ESTÁ EL BOTÓN DE BORRAR --- */}
+                {canDelete && (
+                    <DeleteResourceButton resourceId={resource.id} />
+                )}
             </div>
 
             {/* Content */}
