@@ -7,7 +7,10 @@ async function main() {
     console.log('🌱 Starting seed...');
 
     // Create admin user
-    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const password = process.env.ADMIN_PASSWORD;
+    if (!password) throw new Error('ADMIN_PASSWORD no está definida en .env');
+
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const admin = await prisma.user.upsert({
         where: { email: 'admin@wikidam.com' },

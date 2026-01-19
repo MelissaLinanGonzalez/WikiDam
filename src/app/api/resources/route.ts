@@ -48,8 +48,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // ✅ CORRECCIÓN: Leemos el JSON del cuerpo de la petición
         const body = await request.json();
-        const { title, description, url, filePath, type, subjectId, youtuberId } = body;
+        
+        // Ahora sí podemos extraer las variables de 'body'
+        const { title, description, url, fileUrl, type, subjectId, youtuberId } = body;
 
         if (!title || !type || !subjectId) {
             return NextResponse.json(
@@ -62,8 +65,8 @@ export async function POST(request: NextRequest) {
             data: {
                 title,
                 description,
-                url,
-                filePath,
+                // Si viene de UploadThing usamos fileUrl, si es un link de YouTube usamos url
+                url: fileUrl || url, 
                 type,
                 subjectId,
                 youtuberId: youtuberId || null,

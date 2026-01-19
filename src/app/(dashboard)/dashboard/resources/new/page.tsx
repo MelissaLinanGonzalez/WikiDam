@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, FileText, Upload, AlertCircle, X, Youtube, Video, Image, LinkIcon } from 'lucide-react';
 import { ResourceType } from '@prisma/client';
+import { UploadButton } from '@/lib/uploadthing';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,38 +66,7 @@ function NewResourceForm() {
         }
     }, [subjectId]);
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0];
-        if (!selectedFile) return;
 
-        setFile(selectedFile);
-        setUploading(true);
-        setError('');
-
-        try {
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                setError(data.error || 'Error al subir el archivo');
-                setFile(null);
-            } else {
-                setFilePath(data.filePath);
-            }
-        } catch {
-            setError('Error de conexión al subir el archivo');
-            setFile(null);
-        } finally {
-            setUploading(false);
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -112,7 +82,7 @@ function NewResourceForm() {
                     description,
                     type,
                     url: type === 'VIDEO_YOUTUBE' || type === 'LINK' ? url : undefined,
-                    filePath: filePath || undefined,
+                    fileUrl: filePath || undefined, // Send as fileUrl
                     subjectId,
                     youtuberId: youtuberId || undefined,
                 }),
@@ -176,8 +146,8 @@ function NewResourceForm() {
                                     type="button"
                                     onClick={() => setType(rt.value as ResourceType)}
                                     className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition-all ${type === rt.value
-                                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300'
+                                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300'
                                         }`}
                                 >
                                     <rt.icon className="w-4 h-4" />
@@ -242,23 +212,22 @@ function NewResourceForm() {
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                 Archivo
                             </label>
-                            {file ? (
+                            {filePath ? (
                                 <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
                                     <FileText className="w-8 h-8 text-primary-500" />
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-slate-900 dark:text-white truncate">
-                                            {file.name}
+                                            Archivo subido correctamente
                                         </p>
-                                        <p className="text-sm text-slate-500">
-                                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                                        </p>
+                                        <Link href={filePath} target="_blank" className="text-xs text-primary-500 hover:underline">
+                                            Ver archivo
+                                        </Link>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setFile(null);
                                             setFilePath('');
-                                            if (fileInputRef.current) fileInputRef.current.value = '';
+                                            setFile(null);
                                         }}
                                         className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600"
                                     >
@@ -266,31 +235,19 @@ function NewResourceForm() {
                                     </button>
                                 </div>
                             ) : (
-                                <div
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg p-8 text-center cursor-pointer hover:border-primary-400 dark:hover:border-primary-600 transition-colors"
-                                >
-                                    <Upload className="w-10 h-10 mx-auto text-slate-400" />
-                                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        Haz clic para seleccionar un archivo
-                                    </p>
-                                    <p className="text-xs text-slate-400 mt-1">
-                                        Máximo 10MB
-                                    </p>
-                                </div>
-                            )}
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                onChange={handleFileChange}
-                                accept={type === 'PDF' ? '.pdf' : type === 'IMAGE' ? 'image/*' : 'video/*'}
-                                className="hidden"
-                            />
-                            {uploading && (
-                                <p className="mt-2 text-sm text-primary-600 flex items-center gap-2">
-                                    <div className="w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                                    Subiendo archivo...
-                                </p>
+                                <UploadButton
+                                    endpoint="resourceUploader"
+                                    onClientUploadComplete={(res) => {
+                                        console.log("Files: ", res);
+                                        if (res && res[0]) {
+                                            setFilePath(res[0].url);
+                                            setError('');
+                                        }
+                                    }}
+                                    onUploadError={(error: Error) => {
+                                        setError(`Error al subir: ${error.message}`);
+                                    }}
+                                />
                             )}
                         </div>
                     )}
