@@ -11,12 +11,12 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
             profile(profile) {
                 return {
-                    id: profile.sub,
+                    id: profile.sub, // This is Google's ID, will be overwritten in JWT callback
                     name: profile.name,
                     email: profile.email,
                     image: profile.picture,
                     role: 'STUDENT',
-                    occupation: 'STUDENT', // Default for Google users
+                    occupation: 'STUDENT',
                 }
             },
         }),
@@ -39,8 +39,6 @@ export const authOptions: NextAuthOptions = {
                     throw new Error('Usuario no encontrado');
                 }
 
-                // If user has no password (e.g. created via Google), they can't login with credentials unless they set one.
-                // But for now we just fail.
                 if (!user.password) {
                     throw new Error('Inicia sesión con Google');
                 }
@@ -70,40 +68,60 @@ export const authOptions: NextAuthOptions = {
             if (account?.provider === 'google') {
                 if (!user.email) return false;
 
-                // Check if user exists
                 const dbUser = await prisma.user.findUnique({
                     where: { email: user.email },
                 });
 
                 if (!dbUser) {
+                    // Create new user with Google profile data (first time login)
                     await prisma.user.create({
                         data: {
                             email: user.email,
                             name: user.name || '',
-                            image: user.image,
-                            password: '', // No password for OAuth
+                            image: user.image, // Only set Google image for NEW users
+                            password: '',
                             occupation: 'STUDENT',
                             role: 'STUDENT',
                         },
                     });
                 }
+                // For existing users: Do NOT update the image from Google.
+                // This allows users to have a custom WikiDam profile picture
+                // different from their Google account.
             }
             return true;
         },
         async jwt({ token, user, trigger, session }) {
-            // Update token if user just updated their profile
+            // Handle profile updates
             if (trigger === 'update' && session?.name) {
                 token.name = session.name;
                 token.picture = session.image;
             }
 
-            if (user) {
-                token.id = user.id;
-                token.role = user.role;
-                token.picture = user.image;
-                // @ts-ignore
-                token.occupation = user.occupation;
+            // CRITICAL FIX: Always fetch the real DB user ID by email
+            // This ensures we use the CUID from our database, not the Google SUB ID
+            const email = token.email || user?.email;
+
+            if (email) {
+                const dbUser = await prisma.user.findUnique({
+                    where: { email: email as string },
+                    select: {
+                        id: true,
+                        role: true,
+                        image: true,
+                        occupation: true,
+                    },
+                });
+
+                if (dbUser) {
+                    token.id = dbUser.id; // Use DB CUID, not provider ID
+                    token.role = dbUser.role;
+                    token.picture = dbUser.image; // Always use WikiDam DB image
+                    // @ts-ignore
+                    token.occupation = dbUser.occupation;
+                }
             }
+
             return token;
         },
         async session({ session, token }) {
@@ -123,7 +141,7 @@ export const authOptions: NextAuthOptions = {
     },
     session: {
         strategy: 'jwt',
-        maxAge: 30 * 24 * 60 * 60, // 30 days
+        maxAge: 30 * 24 * 60 * 60,
     },
     secret: process.env.NEXTAUTH_SECRET,
 };

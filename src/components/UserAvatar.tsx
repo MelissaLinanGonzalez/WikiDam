@@ -37,6 +37,7 @@ export function UserAvatar({ name = 'User', image, className = '', size = 'md' }
                 src={finalSrc}
                 alt={name || 'User'}
                 className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
                 onError={() => setHasError(true)}
             />
         </div>
