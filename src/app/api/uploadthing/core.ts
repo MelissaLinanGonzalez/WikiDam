@@ -37,6 +37,34 @@ export const ourFileRouter = {
             // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
             return { uploadedBy: metadata.userId, url: file.url };
         }),
+
+    // Doubt attachments uploader (for doubts and comments)
+    doubtAttachmentUploader: f({
+        image: { maxFileSize: "4MB", maxFileCount: 4 },
+    })
+        .middleware(async ({ req }) => {
+            const user = await auth(req);
+            if (!user) throw new Error("Unauthorized");
+            return { userId: user.id };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            console.log("Doubt attachment uploaded by userId:", metadata.userId);
+            return { uploadedBy: metadata.userId, url: file.url };
+        }),
+
+    // Profile image uploader
+    profileImage: f({
+        image: { maxFileSize: "4MB", maxFileCount: 1 },
+    })
+        .middleware(async ({ req }) => {
+            const user = await auth(req);
+            if (!user) throw new Error("Unauthorized");
+            return { userId: user.id };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            console.log("Profile image uploaded by userId:", metadata.userId);
+            return { uploadedBy: metadata.userId, url: file.url };
+        }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

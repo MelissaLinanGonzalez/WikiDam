@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, Mail, Lock, User, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { BookOpen, Mail, Lock, User, ArrowRight, AlertCircle, CheckCircle, ChevronDown } from 'lucide-react';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -11,6 +11,7 @@ export default function RegisterPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [occupation, setOccupation] = useState('STUDENT');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -36,7 +37,7 @@ export default function RegisterPage() {
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password }),
+                body: JSON.stringify({ name, email, password, occupation }),
             });
 
             const data = await response.json();
@@ -138,6 +139,26 @@ export default function RegisterPage() {
                                         placeholder="tu@email.com"
                                         required
                                     />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="occupation" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    Ocupación
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        id="occupation"
+                                        value={occupation}
+                                        onChange={(e) => setOccupation(e.target.value)}
+                                        className="w-full pl-4 pr-10 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all appearance-none"
+                                        required
+                                    >
+                                        <option value="STUDENT">Estudiante</option>
+                                        <option value="WORKER">Trabajador</option>
+                                        <option value="PROFESSOR">Profesor</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                                 </div>
                             </div>
 

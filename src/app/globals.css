@@ -18,12 +18,9 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
+  background: linear-gradient(to bottom,
       transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+      rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
   min-height: 100vh;
 }
 
@@ -82,6 +79,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -97,6 +95,7 @@ body {
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -105,4 +104,17 @@ body {
 
 .animate-slideIn {
   animation: slideIn 0.3s ease-out forwards;
+}
+
+/* Hide UploadThing extra elements for minimal icon-only buttons */
+.ut-allowed-content,
+[data-ut-element="allowed-content"],
+.uploadthing-button-content-wrapper>span:not(:first-child) {
+  display: none !important;
+}
+
+/* Make UploadThing button appear as just an icon */
+[data-ut-element="button"] {
+  min-width: auto !important;
+  width: auto !important;
 }

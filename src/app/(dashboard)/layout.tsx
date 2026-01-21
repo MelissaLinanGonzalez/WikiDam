@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { UserAvatar } from '@/components/UserAvatar';
 import {
     BookOpen,
     LayoutDashboard,
     FolderOpen,
     Youtube,
     FileText,
+    MessageCircle,
     Settings,
     LogOut,
     Menu,
@@ -24,6 +26,7 @@ const navItems = [
     { href: '/dashboard/subjects', label: 'Asignaturas', icon: FolderOpen },
     { href: '/dashboard/youtubers', label: 'YouTubers', icon: Youtube },
     { href: '/dashboard/resources', label: 'Recursos', icon: FileText },
+    { href: '/dashboard/doubts', label: 'Foro de Dudas', icon: MessageCircle },
 ];
 
 export default function DashboardLayout({
@@ -77,8 +80,8 @@ export default function DashboardLayout({
                                     key={item.href}
                                     href={item.href}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                                         }`}
                                 >
                                     <item.icon className="w-5 h-5" />
@@ -97,8 +100,8 @@ export default function DashboardLayout({
                                 <Link
                                     href="/dashboard/admin"
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${pathname.startsWith('/dashboard/admin')
-                                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                                         }`}
                                 >
                                     <Settings className="w-5 h-5" />
@@ -115,9 +118,11 @@ export default function DashboardLayout({
                                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                             >
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-                                    {session?.user?.name?.charAt(0).toUpperCase() || 'U'}
-                                </div>
+                                <UserAvatar
+                                    name={session?.user?.name}
+                                    image={session?.user?.image}
+                                    className="w-10 h-10"
+                                />
                                 <div className="flex-1 text-left">
                                     <p className="font-medium text-slate-900 dark:text-white truncate">
                                         {session?.user?.name || 'Usuario'}
@@ -141,6 +146,14 @@ export default function DashboardLayout({
 
                             {userMenuOpen && (
                                 <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                    <Link
+                                        href="/dashboard/profile"
+                                        className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 w-full text-left"
+                                        onClick={() => setUserMenuOpen(false)}
+                                    >
+                                        <User className="w-4 h-4" />
+                                        Mi Perfil
+                                    </Link>
                                     <button
                                         onClick={() => signOut({ callbackUrl: '/' })}
                                         className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

@@ -11,6 +11,7 @@ async function getSubjects() {
                 select: {
                     resources: true,
                     youtubers: true,
+                    doubts: true,
                 },
             },
         },
@@ -67,6 +68,9 @@ export default async function SubjectsPage() {
                                 </span>
                                 <span className="text-sm text-slate-500 dark:text-slate-400">
                                     <strong className="text-slate-900 dark:text-white">{subject._count.youtubers}</strong> youtubers
+                                </span>
+                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                    <strong className="text-slate-900 dark:text-white">{subject._count.doubts}</strong> dudas
                                 </span>
                             </div>
                         </Link>

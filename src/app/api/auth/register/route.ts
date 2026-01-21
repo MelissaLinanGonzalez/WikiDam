@@ -5,11 +5,11 @@ import prisma from '@/lib/prisma';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { name, email, password } = body;
+        const { name, email, password, occupation } = body;
 
-        if (!name || !email || !password) {
+        if (!name || !email || !password || !occupation) {
             return NextResponse.json(
-                { error: 'Nombre, email y contraseña son requeridos' },
+                { error: 'Todos los campos son requeridos' },
                 { status: 400 }
             );
         }
@@ -35,12 +35,15 @@ export async function POST(request: NextRequest) {
                 name,
                 email,
                 password: hashedPassword,
+                occupation: occupation as 'STUDENT' | 'WORKER' | 'PROFESSOR',
+                role: 'STUDENT', // Force student role on registration
             },
             select: {
                 id: true,
                 name: true,
                 email: true,
                 role: true,
+                occupation: true,
                 createdAt: true,
             },
         });

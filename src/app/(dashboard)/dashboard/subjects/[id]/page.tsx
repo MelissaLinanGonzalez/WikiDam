@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import * as LucideIcons from 'lucide-react';
-import { ArrowLeft, Youtube, FileText, Video, Image, LinkIcon } from 'lucide-react';
+import { ArrowLeft, Youtube, FileText, Video, Image, LinkIcon, MessageCircle, Lock, Unlock } from 'lucide-react';
 import { ResourceType } from '@prisma/client';
 
 interface PageProps {
@@ -18,6 +18,13 @@ async function getSubject(id: string) {
                 include: {
                     author: { select: { name: true } },
                     youtuber: { select: { name: true } },
+                },
+                orderBy: { createdAt: 'desc' },
+            },
+            doubts: {
+                include: {
+                    author: { select: { name: true } },
+                    _count: { select: { comments: true } },
                 },
                 orderBy: { createdAt: 'desc' },
             },
@@ -147,6 +154,65 @@ export default async function SubjectDetailPage({ params }: PageProps) {
                     ) : (
                         <div className="p-8 text-center text-slate-500 dark:text-slate-400">
                             No hay recursos en esta asignatura todavía.
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Doubts */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                        <MessageCircle className="w-5 h-5 text-primary-500" />
+                        Dudas ({subject.doubts.length})
+                    </h2>
+                    <Link
+                        href="/dashboard/doubts"
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+                    >
+                        Ver foro
+                    </Link>
+                </div>
+
+                <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {subject.doubts.length > 0 ? (
+                        subject.doubts.map((doubt) => (
+                            <Link
+                                key={doubt.id}
+                                href={`/dashboard/doubts?id=${doubt.id}`}
+                                className="block p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${doubt.status === 'OPEN'
+                                            ? 'bg-green-100 dark:bg-green-900/30'
+                                            : 'bg-slate-100 dark:bg-slate-700'
+                                        }`}>
+                                        {doubt.status === 'OPEN' ? (
+                                            <Unlock className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                        ) : (
+                                            <Lock className="w-5 h-5 text-slate-400" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-medium text-slate-900 dark:text-white truncate">
+                                            {doubt.title}
+                                        </h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                                            por {doubt.author.name} · {doubt._count.comments} respuestas
+                                        </p>
+                                    </div>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${doubt.status === 'OPEN'
+                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                        }`}>
+                                        {doubt.status === 'OPEN' ? 'Abierta' : 'Cerrada'}
+                                    </span>
+                                </div>
+                            </Link>
+                        ))
+                    ) : (
+                        <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+                            No hay dudas relacionadas con esta asignatura.
                         </div>
                     )}
                 </div>
