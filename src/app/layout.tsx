@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     title: 'WikiDam - Wiki para Estudiantes DAM',
     description: 'Plataforma colaborativa para compartir recursos educativos de Desarrollo de Aplicaciones Multiplataforma',
     keywords: ['DAM', 'wiki', 'educación', 'programación', 'desarrollo'],
+    icons: {
+        icon: '/icon.jpg',
+    },
 };
 
 export default function RootLayout({
