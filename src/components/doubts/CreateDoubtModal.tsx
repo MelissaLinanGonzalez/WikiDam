@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, AlertCircle, Image as ImageIcon, Check } from 'lucide-react';
+import { X, AlertCircle, Image as ImageIcon, Check, Hash } from 'lucide-react';
 import { UploadButton } from '@/lib/uploadthing';
 import { createDoubt, getSubjectsForDoubt } from '@/actions/doubts';
+import { getAllCategories } from '@/actions/categories';
 
 interface Subject {
     id: string;
@@ -17,6 +18,13 @@ interface CreateDoubtModalProps {
     onClose: () => void;
 }
 
+interface Category {
+    id: string;
+    name: string;
+    slug: string;
+    icon: string | null;
+}
+
 export default function CreateDoubtModal({ isOpen, onClose }: CreateDoubtModalProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
@@ -24,16 +32,23 @@ export default function CreateDoubtModal({ isOpen, onClose }: CreateDoubtModalPr
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [attachments, setAttachments] = useState<string[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [error, setError] = useState('');
     const [loadingSubjects, setLoadingSubjects] = useState(true);
+    const [loadingCategories, setLoadingCategories] = useState(true);
 
     useEffect(() => {
         if (isOpen) {
             getSubjectsForDoubt().then((data) => {
                 setSubjects(data);
                 setLoadingSubjects(false);
+            });
+            getAllCategories().then((data) => {
+                setCategories(data);
+                setLoadingCategories(false);
             });
         }
     }, [isOpen]);
@@ -48,15 +63,16 @@ export default function CreateDoubtModal({ isOpen, onClose }: CreateDoubtModalPr
                 description,
                 attachments,
                 subjectIds: selectedSubjects,
+                categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
             });
 
             if (result.error) {
                 setError(result.error);
             } else {
-                // Reset form
                 setTitle('');
                 setDescription('');
                 setSelectedSubjects([]);
+                setSelectedCategories([]);
                 setAttachments([]);
                 onClose();
                 router.refresh();
@@ -67,6 +83,12 @@ export default function CreateDoubtModal({ isOpen, onClose }: CreateDoubtModalPr
     const toggleSubject = (id: string) => {
         setSelectedSubjects((prev) =>
             prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+        );
+    };
+
+    const toggleCategory = (id: string) => {
+        setSelectedCategories((prev) =>
+            prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
         );
     };
 
@@ -165,8 +187,8 @@ export default function CreateDoubtModal({ isOpen, onClose }: CreateDoubtModalPr
                                             type="button"
                                             onClick={() => toggleSubject(subject.id)}
                                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${isSelected
-                                                    ? 'bg-primary-600 text-white'
-                                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                                ? 'bg-primary-600 text-white'
+                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                                                 }`}
                                             style={
                                                 !isSelected && subject.color
@@ -184,10 +206,42 @@ export default function CreateDoubtModal({ isOpen, onClose }: CreateDoubtModalPr
                                 })}
                             </div>
                         )}
-                        {selectedSubjects.length === 0 && (
+                        {selectedSubjects.length === 0 && selectedCategories.length === 0 && (
                             <p className="mt-1 text-xs text-slate-500">
-                                Selecciona al menos una asignatura
+                                Selecciona al menos una asignatura o una categoría
                             </p>
+                        )}
+                    </div>
+
+                    {/* Category Selection (Optional) */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                            Categorías temáticas (opcional)
+                        </label>
+                        {loadingCategories ? (
+                            <div className="p-4 text-center text-slate-500">
+                                Cargando categorías...
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg max-h-32 overflow-y-auto">
+                                {categories.map((category) => {
+                                    const isSelected = selectedCategories.includes(category.id);
+                                    return (
+                                        <button
+                                            key={category.id}
+                                            type="button"
+                                            onClick={() => toggleCategory(category.id)}
+                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${isSelected
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40'
+                                                }`}
+                                        >
+                                            {isSelected ? <Check className="w-3.5 h-3.5" /> : <Hash className="w-3.5 h-3.5" />}
+                                            {category.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
 
@@ -256,7 +310,7 @@ export default function CreateDoubtModal({ isOpen, onClose }: CreateDoubtModalPr
                         </button>
                         <button
                             type="submit"
-                            disabled={isPending || selectedSubjects.length === 0}
+                            disabled={isPending || (selectedSubjects.length === 0 && selectedCategories.length === 0)}
                             className="flex-1 py-2.5 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isPending ? (

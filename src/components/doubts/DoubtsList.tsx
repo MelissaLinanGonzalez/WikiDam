@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageCircle, Plus, User, Lock, Unlock } from 'lucide-react';
+import { MessageCircle, Plus, User, Lock, Unlock, Hash } from 'lucide-react';
 import type { DoubtListItem } from '@/actions/doubts';
 
 interface DoubtsListProps {
@@ -62,8 +62,8 @@ export default function DoubtsList({
                                 key={doubt.id}
                                 onClick={() => onSelectDoubt(doubt.id)}
                                 className={`w-full p-4 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50 ${selectedDoubtId === doubt.id
-                                        ? 'bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500'
-                                        : ''
+                                    ? 'bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500'
+                                    : ''
                                     }`}
                             >
                                 {/* Title and Status */}
@@ -112,6 +112,25 @@ export default function DoubtsList({
                                         </span>
                                     )}
                                 </div>
+                                {/* Category Badges */}
+                                {doubt.categories && doubt.categories.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {doubt.categories.slice(0, 2).map((category: { id: string; name: string }) => (
+                                            <span
+                                                key={category.id}
+                                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                            >
+                                                <Hash className="w-2.5 h-2.5" />
+                                                {category.name}
+                                            </span>
+                                        ))}
+                                        {doubt.categories.length > 2 && (
+                                            <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-500">
+                                                +{doubt.categories.length - 2}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                             </button>
                         ))}
                     </div>

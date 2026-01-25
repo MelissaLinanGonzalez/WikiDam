@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserAvatar } from '@/components/UserAvatar';
+import { getAllCategories } from '@/actions/categories';
 import {
     BookOpen,
     LayoutDashboard,
@@ -19,7 +20,15 @@ import {
     ChevronDown,
     User,
     Shield,
+    Hash,
 } from 'lucide-react';
+
+interface Category {
+    id: string;
+    name: string;
+    slug: string;
+    icon: string | null;
+}
 
 const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -38,6 +47,11 @@ export default function DashboardLayout({
     const pathname = usePathname();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [categories, setCategories] = useState<Category[]>([]);
+
+    useEffect(() => {
+        getAllCategories().then(setCategories);
+    }, []);
 
     const isAdmin = session?.user?.role === 'ADMIN';
 
@@ -89,6 +103,27 @@ export default function DashboardLayout({
                                 </Link>
                             );
                         })}
+
+                        {/* Categories Section */}
+                        {categories.length > 0 && (
+                            <>
+                                <div className="pt-4 pb-2">
+                                    <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                        Explorar por Temas
+                                    </p>
+                                </div>
+                                {categories.map((category) => (
+                                    <Link
+                                        key={category.id}
+                                        href={`/dashboard/resources?category=${category.slug}`}
+                                        className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm`}
+                                    >
+                                        <Hash className="w-4 h-4" />
+                                        <span>{category.name}</span>
+                                    </Link>
+                                ))}
+                            </>
+                        )}
 
                         {isAdmin && (
                             <>

@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Upload, AlertCircle, X, Youtube, Video, Image, LinkIcon } from 'lucide-react';
+import { ArrowLeft, FileText, Upload, AlertCircle, X, Youtube, Video, Image, LinkIcon, Hash, Check } from 'lucide-react';
 import { ResourceType } from '@prisma/client';
 import { UploadButton } from '@/lib/uploadthing';
+import { getAllCategories } from '@/actions/categories';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,13 @@ interface Subject {
 interface Youtuber {
     id: string;
     name: string;
+}
+
+interface Category {
+    id: string;
+    name: string;
+    slug: string;
+    icon: string | null;
 }
 
 const resourceTypes = [
@@ -35,6 +43,8 @@ function NewResourceForm() {
 
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [youtubers, setYoutubers] = useState<Youtuber[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState<ResourceType>('LINK');
@@ -52,6 +62,7 @@ function NewResourceForm() {
             .then((res) => res.json())
             .then((data) => setSubjects(data))
             .catch(() => setError('Error al cargar las asignaturas'));
+        getAllCategories().then(setCategories);
     }, []);
 
     useEffect(() => {
@@ -82,9 +93,10 @@ function NewResourceForm() {
                     description,
                     type,
                     url: type === 'VIDEO_YOUTUBE' || type === 'LINK' ? url : undefined,
-                    fileUrl: filePath || undefined, // Send as fileUrl
-                    subjectId,
+                    fileUrl: filePath || undefined,
+                    subjectId: subjectId || undefined,
                     youtuberId: youtuberId || undefined,
+                    categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
                 }),
             });
 
@@ -262,7 +274,6 @@ function NewResourceForm() {
                             value={subjectId}
                             onChange={(e) => setSubjectId(e.target.value)}
                             className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                            required
                         >
                             <option value="">Selecciona una asignatura</option>
                             {subjects.map((subject) => (
@@ -271,6 +282,9 @@ function NewResourceForm() {
                                 </option>
                             ))}
                         </select>
+                        <p className="mt-1 text-xs text-slate-500">
+                            (Opcional si seleccionas una categoría)
+                        </p>
                     </div>
 
                     {/* Youtuber (optional, for YouTube videos) */}
@@ -292,6 +306,38 @@ function NewResourceForm() {
                                     </option>
                                 ))}
                             </select>
+                        </div>
+                    )}
+
+                    {/* Categories (optional) */}
+                    {categories.length > 0 && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Categorías temáticas (opcional)
+                            </label>
+                            <div className="flex flex-wrap gap-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg max-h-32 overflow-y-auto">
+                                {categories.map((category) => {
+                                    const isSelected = selectedCategories.includes(category.id);
+                                    return (
+                                        <button
+                                            key={category.id}
+                                            type="button"
+                                            onClick={() => setSelectedCategories((prev) =>
+                                                prev.includes(category.id)
+                                                    ? prev.filter((c) => c !== category.id)
+                                                    : [...prev, category.id]
+                                            )}
+                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${isSelected
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40'
+                                                }`}
+                                        >
+                                            {isSelected ? <Check className="w-3.5 h-3.5" /> : <Hash className="w-3.5 h-3.5" />}
+                                            {category.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 

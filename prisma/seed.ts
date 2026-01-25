@@ -104,6 +104,27 @@ async function main() {
         console.log('✅ Example youtuber created');
     }
 
+    // Create default categories
+    const categories = [
+        { name: 'Desarrollo Frontend', slug: 'frontend', icon: 'Monitor' },
+        { name: 'Backend', slug: 'backend', icon: 'Server' },
+        { name: 'Ciberseguridad', slug: 'ciberseguridad', icon: 'Shield' },
+        { name: 'DevOps', slug: 'devops', icon: 'GitBranch' },
+        { name: 'Bases de Datos', slug: 'bases-de-datos', icon: 'Database' },
+        { name: 'Inteligencia Artificial', slug: 'inteligencia-artificial', icon: 'Brain' },
+        { name: 'Diseño UI/UX', slug: 'diseno-ui-ux', icon: 'Palette' },
+        { name: 'Sistemas', slug: 'sistemas', icon: 'Cpu' },
+    ];
+
+    for (const category of categories) {
+        await prisma.category.upsert({
+            where: { slug: category.slug },
+            update: category,
+            create: category,
+        });
+    }
+    console.log(`✅ Created ${categories.length} categories`);
+
     console.log('🎉 Seed completed successfully!');
 }
 

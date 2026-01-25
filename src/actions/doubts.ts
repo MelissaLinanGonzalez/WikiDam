@@ -17,6 +17,7 @@ export async function createDoubt(data: {
     description: string;
     attachments: string[];
     subjectIds: string[];
+    categoryIds?: string[];
 }) {
     const session = await getServerSession(authOptions);
 
@@ -32,8 +33,8 @@ export async function createDoubt(data: {
         return { error: 'La descripción debe tener al menos 10 caracteres' };
     }
 
-    if (!data.subjectIds || data.subjectIds.length === 0) {
-        return { error: 'Debes seleccionar al menos una asignatura' };
+    if ((!data.subjectIds || data.subjectIds.length === 0) && (!data.categoryIds || data.categoryIds.length === 0)) {
+        return { error: 'Debes seleccionar al menos una asignatura o una categoría' };
     }
 
     try {
@@ -43,13 +44,21 @@ export async function createDoubt(data: {
                 description: data.description.trim(),
                 attachments: data.attachments,
                 authorId: session.user.id,
-                subjects: {
-                    connect: data.subjectIds.map(id => ({ id })),
-                },
+                ...(data.subjectIds && data.subjectIds.length > 0 && {
+                    subjects: {
+                        connect: data.subjectIds.map(id => ({ id })),
+                    },
+                }),
+                ...(data.categoryIds && data.categoryIds.length > 0 && {
+                    categories: {
+                        connect: data.categoryIds.map(id => ({ id })),
+                    },
+                }),
             },
             include: {
                 author: { select: { id: true, name: true } },
                 subjects: { select: { id: true, name: true, color: true } },
+                categories: { select: { id: true, name: true, slug: true, icon: true } },
             },
         });
 
@@ -70,6 +79,7 @@ export async function getDoubts() {
             include: {
                 author: { select: { id: true, name: true } },
                 subjects: { select: { id: true, name: true, color: true } },
+                categories: { select: { id: true, name: true, slug: true, icon: true } },
                 _count: { select: { comments: true } },
             },
             orderBy: { createdAt: 'desc' },
@@ -92,6 +102,7 @@ export async function getDoubtById(id: string) {
             include: {
                 author: { select: { id: true, name: true, image: true } },
                 subjects: { select: { id: true, name: true, color: true } },
+                categories: { select: { id: true, name: true, slug: true, icon: true } },
                 comments: {
                     include: {
                         author: { select: { id: true, name: true, image: true } },
@@ -221,5 +232,45 @@ export async function getSubjectsForDoubt() {
     } catch (error) {
         console.error('Error fetching subjects:', error);
         return [];
+    }
+}
+
+/**
+ * Delete a doubt - Only the author or an ADMIN can delete
+ */
+export async function deleteDoubt(doubtId: string) {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+        return { error: 'No autorizado' };
+    }
+
+    try {
+        const doubt = await prisma.doubt.findUnique({
+            where: { id: doubtId },
+            select: { authorId: true },
+        });
+
+        if (!doubt) {
+            return { error: 'Duda no encontrada' };
+        }
+
+        // Check if user is author or admin
+        const isAuthor = doubt.authorId === session.user.id;
+        const isAdmin = session.user.role === 'ADMIN';
+
+        if (!isAuthor && !isAdmin) {
+            return { error: 'Solo el autor o un administrador puede eliminar la duda' };
+        }
+
+        await prisma.doubt.delete({
+            where: { id: doubtId },
+        });
+
+        revalidatePath('/dashboard/doubts');
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting doubt:', error);
+        return { error: 'Error al eliminar la duda' };
     }
 }

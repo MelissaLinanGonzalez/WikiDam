@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
                 subject: true,
                 youtuber: true,
                 author: { select: { id: true, name: true, image: true } },
+                categories: { select: { id: true, name: true, slug: true, icon: true } },
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -48,15 +49,19 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // ✅ CORRECCIÓN: Leemos el JSON del cuerpo de la petición
         const body = await request.json();
-        
-        // Ahora sí podemos extraer las variables de 'body'
-        const { title, description, url, fileUrl, type, subjectId, youtuberId } = body;
+        const { title, description, url, fileUrl, type, subjectId, youtuberId, categoryIds } = body;
 
-        if (!title || !type || !subjectId) {
+        if (!title || !type) {
             return NextResponse.json(
-                { error: 'Título, tipo y asignatura son requeridos' },
+                { error: 'Título y tipo son requeridos' },
+                { status: 400 }
+            );
+        }
+
+        if (!subjectId && (!categoryIds || categoryIds.length === 0)) {
+            return NextResponse.json(
+                { error: 'Debes seleccionar al menos una asignatura o una categoría' },
                 { status: 400 }
             );
         }
@@ -65,17 +70,22 @@ export async function POST(request: NextRequest) {
             data: {
                 title,
                 description,
-                // Si viene de UploadThing usamos fileUrl, si es un link de YouTube usamos url
-                url: fileUrl || url, 
+                url: fileUrl || url,
                 type,
-                subjectId,
+                subjectId: subjectId || null,
                 youtuberId: youtuberId || null,
                 authorId: session.user.id,
+                ...(categoryIds && categoryIds.length > 0 && {
+                    categories: {
+                        connect: categoryIds.map((id: string) => ({ id })),
+                    },
+                }),
             },
             include: {
                 subject: true,
                 youtuber: true,
                 author: { select: { id: true, name: true, image: true } },
+                categories: { select: { id: true, name: true, slug: true, icon: true } },
             },
         });
 

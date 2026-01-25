@@ -13,10 +13,11 @@ import {
     Send,
     AlertCircle,
     X,
+    Trash2,
 } from 'lucide-react';
 import { useUploadThing } from '@/lib/uploadthing';
 import { UserAvatar } from '@/components/UserAvatar';
-import { closeDoubt, createComment } from '@/actions/doubts';
+import { closeDoubt, createComment, deleteDoubt } from '@/actions/doubts';
 import type { DoubtWithRelations } from '@/actions/doubts';
 
 interface DoubtDetailProps {
@@ -33,6 +34,7 @@ export default function DoubtDetail({ doubt, onBack }: DoubtDetailProps) {
     const [attachments, setAttachments] = useState<string[]>([]);
     const [error, setError] = useState('');
     const [isClosing, setIsClosing] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Upload hook for custom file picker
     const { startUpload, isUploading } = useUploadThing('doubtAttachmentUploader');
@@ -74,7 +76,27 @@ export default function DoubtDetail({ doubt, onBack }: DoubtDetailProps) {
     const isAuthor = session?.user?.id === doubt.authorId;
     const isAdmin = session?.user?.role === 'ADMIN';
     const canClose = (isAuthor || isAdmin) && doubt.status === 'OPEN';
+    const canDelete = isAuthor || isAdmin;
     const canComment = doubt.status === 'OPEN';
+
+    const handleDelete = async () => {
+        if (!confirm('¿Estás seguro de que quieres eliminar esta duda? Esta acción no se puede deshacer.')) {
+            return;
+        }
+
+        setIsDeleting(true);
+        setError('');
+
+        const result = await deleteDoubt(doubt.id);
+
+        if (result.error) {
+            setError(result.error);
+            setIsDeleting(false);
+        } else {
+            router.push('/dashboard/doubts');
+            router.refresh();
+        }
+    };
 
     const handleClose = async () => {
         if (!confirm('¿Estás seguro de que quieres cerrar esta duda? No se podrán añadir más respuestas.')) {
@@ -199,6 +221,18 @@ export default function DoubtDetail({ doubt, onBack }: DoubtDetailProps) {
                                     >
                                         <Lock className="w-3 h-3" />
                                         Finalizar conversación
+                                    </button>
+                                )}
+
+                                {canDelete && (
+                                    <button
+                                        onClick={handleDelete}
+                                        disabled={isDeleting}
+                                        className="flex items-center gap-1.5 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50 text-xs font-medium"
+                                        title="Eliminar Duda"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                        {isDeleting ? 'Eliminando...' : 'Eliminar'}
                                     </button>
                                 )}
                             </div>
