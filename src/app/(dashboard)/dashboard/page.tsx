@@ -21,8 +21,9 @@ async function getStats() {
             take: 5,
             orderBy: { createdAt: 'desc' },
             include: {
-                subject: true,
-                author: { select: { name: true } },
+                author: { select: { name: true, image: true } },
+                subject: { select: { name: true, color: true } },
+                categories: true,
             },
         }),
     ]);
@@ -117,7 +118,7 @@ export default async function DashboardPage() {
                                             {resource.title}
                                         </h3>
                                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                                            {resource.subject?.name || 'Sin asignatura'} · por {resource.author.name}
+                                            {resource.subject?.name ?? resource.categories[0]?.name ?? 'General'} · por {resource.author?.name ?? 'Anónimo'}
                                         </p>
                                     </div>
                                     <span className="px-3 py-1 text-xs font-medium bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 rounded-full">
