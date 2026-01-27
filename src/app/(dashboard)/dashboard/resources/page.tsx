@@ -209,7 +209,7 @@ export default async function ResourcesPage({ searchParams }: PageProps) {
                                             )}
                                         </div>
                                         <span className="text-slate-400 dark:text-slate-500 ml-2 flex-shrink-0">
-                                            por {resource.author.name}
+                                            por {resource.author?.name ?? 'Anónimo'}
                                         </span>
                                     </div>
                                     {resource.categories && resource.categories.length > 0 && (
