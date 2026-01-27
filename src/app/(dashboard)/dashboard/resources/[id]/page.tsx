@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth'; // <--- NUEVO
-import { authOptions } from '@/lib/auth';     // <--- NUEVO
-import DeleteResourceButton from '@/components/DeleteResourceButton'; // <--- NUEVO
-import { ArrowLeft, Youtube, Video, FileText, Image, LinkIcon, ExternalLink, Download, User, Calendar } from 'lucide-react';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import DeleteResourceButton from '@/components/DeleteResourceButton';
+import { ArrowLeft, Youtube, Video, FileText, Image, LinkIcon, ExternalLink, Download, User, Calendar, Tag } from 'lucide-react';
 import { ResourceType } from '@prisma/client';
 
 interface PageProps {
@@ -18,6 +18,7 @@ async function getResource(id: string) {
             subject: true,
             youtuber: true,
             author: { select: { id: true, name: true, image: true } },
+            categories: true,
         },
     });
     return resource;
@@ -82,23 +83,32 @@ export default async function ResourceDetailPage({ params }: PageProps) {
                     <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                 </Link>
                 <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
+                    <div className="flex items-center gap-3 mb-1 flex-wrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${typeColors[resource.type]}`}>
                             <TypeIcon className="w-3.5 h-3.5" />
                             {typeLabels[resource.type]}
                         </span>
-                        <Link
-                            href={`/dashboard/subjects/${resource.subject.id}`}
-                            className="text-sm text-slate-500 hover:text-primary-600 transition-colors"
-                        >
-                            {resource.subject.name}
-                        </Link>
+                        {resource.subject ? (
+                            <Link
+                                href={`/dashboard/subjects/${resource.subject.id}`}
+                                className="text-sm text-slate-500 hover:text-primary-600 transition-colors"
+                            >
+                                {resource.subject.name}
+                            </Link>
+                        ) : resource.categories && resource.categories.length > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
+                                <Tag className="w-3 h-3" />
+                                {resource.categories[0].name}
+                            </span>
+                        ) : (
+                            <span className="text-sm text-slate-400 dark:text-slate-500">General</span>
+                        )}
                     </div>
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                         {resource.title}
                     </h1>
                 </div>
-                
+
                 {/* --- AQUÍ ESTÁ EL BOTÓN DE BORRAR --- */}
                 {canDelete && (
                     <DeleteResourceButton resourceId={resource.id} />
@@ -172,7 +182,7 @@ export default async function ResourceDetailPage({ params }: PageProps) {
                     <div className="flex flex-wrap gap-6 pt-6 border-t border-slate-100 dark:border-slate-700 text-sm">
                         <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                             <User className="w-4 h-4" />
-                            <span>Compartido por <strong className="text-slate-900 dark:text-white">{resource.author.name}</strong></span>
+                            <span>Compartido por <strong className="text-slate-900 dark:text-white">{resource.author?.name ?? 'Anónimo'}</strong></span>
                         </div>
                         <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                             <Calendar className="w-4 h-4" />
