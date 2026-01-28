@@ -55,6 +55,9 @@ export default function DashboardLayout({
 
     const isAdmin = session?.user?.role === 'ADMIN';
 
+    // Helper to close sidebar on mobile after navigation
+    const closeSidebar = () => setSidebarOpen(false);
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
             {/* Mobile sidebar backdrop */}
@@ -73,7 +76,7 @@ export default function DashboardLayout({
                 <div className="flex flex-col h-full">
                     {/* Logo */}
                     <div className="flex items-center justify-between h-16 px-6 border-b border-slate-200 dark:border-slate-700">
-                        <Link href="/dashboard" className="flex items-center gap-2">
+                        <Link href="/dashboard" className="flex items-center gap-2" onClick={closeSidebar}>
                             <BookOpen className="w-7 h-7 text-primary-600" />
                             <span className="text-xl font-bold text-slate-900 dark:text-white">WikiDam</span>
                         </Link>
@@ -93,6 +96,7 @@ export default function DashboardLayout({
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    onClick={closeSidebar}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
                                         ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
                                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -116,6 +120,7 @@ export default function DashboardLayout({
                                     <Link
                                         key={category.id}
                                         href={`/dashboard/resources?category=${category.slug}`}
+                                        onClick={closeSidebar}
                                         className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm`}
                                     >
                                         <Hash className="w-4 h-4" />
@@ -134,6 +139,7 @@ export default function DashboardLayout({
                                 </div>
                                 <Link
                                     href="/dashboard/admin"
+                                    onClick={closeSidebar}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${pathname.startsWith('/dashboard/admin')
                                         ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
                                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -184,7 +190,7 @@ export default function DashboardLayout({
                                     <Link
                                         href="/dashboard/profile"
                                         className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 w-full text-left"
-                                        onClick={() => setUserMenuOpen(false)}
+                                        onClick={() => { setUserMenuOpen(false); closeSidebar(); }}
                                     >
                                         <User className="w-4 h-4" />
                                         Mi Perfil
