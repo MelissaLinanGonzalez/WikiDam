@@ -5,7 +5,7 @@ import * as cheerio from 'cheerio';
 
 /**
  * Analiza una URL y detecta automáticamente la categoría más probable
- * basándose en los metadatos de la página (título y descripción).
+ * basándose en los metadatos de la página y las keywords de las categorías.
  */
 export async function analyzeUrl(url: string): Promise<{
     success: boolean;
@@ -21,27 +21,37 @@ export async function analyzeUrl(url: string): Promise<{
             return { success: false, error: 'URL inválida' };
         }
 
-        // 1. Obtener todas las categorías de la base de datos
+        // 1. Obtener todas las categorías CON sus keywords de la base de datos
         const categories = await prisma.category.findMany({
-            select: { id: true, name: true, slug: true }
+            select: { id: true, name: true, slug: true, keywords: true }
         });
 
         if (categories.length === 0) {
             return { success: false, error: 'No hay categorías definidas' };
         }
 
-        // 2. Hacer fetch a la URL con User-Agent de Chrome
+        // 2. Hacer fetch a la URL con headers de navegador real
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
+        const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
         let html: string;
         try {
             const response = await fetch(url, {
                 signal: controller.signal,
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Cache-Control': 'no-cache',
+                    'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+                    'Sec-Ch-Ua-Mobile': '?0',
+                    'Sec-Ch-Ua-Platform': '"Windows"',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'none',
+                    'Sec-Fetch-User': '?1',
+                    'Upgrade-Insecure-Requests': '1',
                 },
             });
             clearTimeout(timeout);
@@ -59,30 +69,32 @@ export async function analyzeUrl(url: string): Promise<{
             return { success: false, error: 'No se pudo acceder a la URL' };
         }
 
-        // 3. Extraer título y descripción con Cheerio
+        // 3. Extraer TODOS los metadatos relevantes con Cheerio
         const $ = cheerio.load(html);
 
-        const pageTitle = $('title').first().text().trim() ||
-            $('meta[property="og:title"]').attr('content')?.trim() || '';
+        const title = $('title').first().text().trim();
+        const ogTitle = $('meta[property="og:title"]').attr('content')?.trim() || '';
+        const metaDescription = $('meta[name="description"]').attr('content')?.trim() || '';
+        const ogDescription = $('meta[property="og:description"]').attr('content')?.trim() || '';
+        const twitterDescription = $('meta[name="twitter:description"]').attr('content')?.trim() || '';
+        const keywords = $('meta[name="keywords"]').attr('content')?.trim() || '';
 
-        const pageDescription = $('meta[name="description"]').attr('content')?.trim() ||
-            $('meta[property="og:description"]').attr('content')?.trim() || '';
+        // También extraer el contenido de los primeros headings
+        const h1Text = $('h1').first().text().trim();
 
-        // 4. Buscar coincidencias en el texto
-        const textToAnalyze = `${pageTitle} ${pageDescription}`.toLowerCase();
+        // Concatenar todo el texto para analizar (en minúsculas)
+        const textToAnalyze = [
+            title,
+            ogTitle,
+            metaDescription,
+            ogDescription,
+            twitterDescription,
+            keywords,
+            h1Text,
+            url // Incluir la URL también
+        ].join(' ').toLowerCase();
 
-        // Mapeo de palabras clave adicionales para cada categoría
-        const keywordsMap: Record<string, string[]> = {
-            'frontend': ['react', 'vue', 'angular', 'css', 'html', 'javascript', 'typescript', 'tailwind', 'next', 'ui', 'ux', 'web'],
-            'backend': ['node', 'express', 'api', 'rest', 'servidor', 'server', 'java', 'spring', 'python', 'django', 'php', 'laravel'],
-            'android': ['kotlin', 'jetpack', 'compose', 'mobile', 'app', 'play store', 'gradle'],
-            'ios': ['swift', 'swiftui', 'xcode', 'iphone', 'ipad', 'apple'],
-            'database': ['sql', 'mysql', 'postgresql', 'mongodb', 'base de datos', 'prisma', 'orm', 'consulta'],
-            'devops': ['docker', 'kubernetes', 'ci/cd', 'deploy', 'aws', 'azure', 'cloud', 'linux', 'nginx'],
-            'git': ['github', 'gitlab', 'version', 'control', 'branch', 'commit', 'merge'],
-            'testing': ['test', 'jest', 'testing', 'qa', 'unit', 'e2e', 'cypress'],
-        };
-
+        // 4. Algoritmo de match: buscar coincidencias con categorías
         let bestMatch: { categoryId: string; categoryName: string; score: number } | null = null;
 
         for (const category of categories) {
@@ -90,19 +102,20 @@ export async function analyzeUrl(url: string): Promise<{
             const categoryNameLower = category.name.toLowerCase();
             const categorySlugLower = category.slug.toLowerCase();
 
-            // Coincidencia exacta con nombre o slug
+            // Coincidencia con nombre de categoría (+10 puntos)
             if (textToAnalyze.includes(categoryNameLower)) {
                 score += 10;
             }
+
+            // Coincidencia con slug de categoría (+8 puntos)
             if (textToAnalyze.includes(categorySlugLower)) {
                 score += 8;
             }
 
-            // Buscar palabras clave adicionales
-            const keywords = keywordsMap[categorySlugLower] || [];
-            for (const keyword of keywords) {
-                if (textToAnalyze.includes(keyword)) {
-                    score += 2;
+            // Buscar coincidencias en keywords de la BD (+3 puntos por keyword)
+            for (const keyword of category.keywords) {
+                if (textToAnalyze.includes(keyword.toLowerCase())) {
+                    score += 3;
                 }
             }
 
@@ -117,21 +130,24 @@ export async function analyzeUrl(url: string): Promise<{
         }
 
         // 5. Devolver resultado
+        const pageTitle = title || ogTitle || undefined;
+        const pageDescription = metaDescription || ogDescription || twitterDescription || undefined;
+
         if (bestMatch) {
             return {
                 success: true,
                 categoryId: bestMatch.categoryId,
                 categoryName: bestMatch.categoryName,
-                title: pageTitle || undefined,
-                description: pageDescription || undefined,
+                title: pageTitle,
+                description: pageDescription,
             };
         }
 
+        // No se encontró categoría, pero se extrajeron los metadatos
         return {
             success: true,
-            title: pageTitle || undefined,
-            description: pageDescription || undefined,
-            // No se encontró categoría, pero se extrajeron los metadatos
+            title: pageTitle,
+            description: pageDescription,
         };
 
     } catch (error) {

@@ -104,26 +104,66 @@ async function main() {
         console.log('✅ Example youtuber created');
     }
 
-    // Create default categories
+    // Create default categories with keywords for auto-detection
     const categories = [
-        { name: 'Desarrollo Frontend', slug: 'frontend', icon: 'Monitor' },
-        { name: 'Backend', slug: 'backend', icon: 'Server' },
-        { name: 'Ciberseguridad', slug: 'ciberseguridad', icon: 'Shield' },
-        { name: 'DevOps', slug: 'devops', icon: 'GitBranch' },
-        { name: 'Bases de Datos', slug: 'bases-de-datos', icon: 'Database' },
-        { name: 'Inteligencia Artificial', slug: 'inteligencia-artificial', icon: 'Brain' },
-        { name: 'Diseño UI/UX', slug: 'diseno-ui-ux', icon: 'Palette' },
-        { name: 'Sistemas', slug: 'sistemas', icon: 'Cpu' },
+        {
+            name: 'Desarrollo Frontend',
+            slug: 'frontend',
+            icon: 'Monitor',
+            keywords: ['html', 'css', 'javascript', 'react', 'nextjs', 'next.js', 'tailwind', 'vue', 'angular', 'svelte', 'typescript', 'web', 'frontend', 'ui', 'interfaz', 'responsive', 'sass', 'scss', 'bootstrap', 'astro', 'remix']
+        },
+        {
+            name: 'Backend',
+            slug: 'backend',
+            icon: 'Server',
+            keywords: ['node', 'nodejs', 'express', 'python', 'django', 'flask', 'java', 'spring', 'php', 'laravel', 'api', 'rest', 'graphql', 'servidor', 'server', 'backend', 'microservicios', 'nestjs', 'fastapi', '.net', 'ruby', 'rails', 'golang', 'go']
+        },
+        {
+            name: 'Ciberseguridad',
+            slug: 'ciberseguridad',
+            icon: 'Shield',
+            keywords: ['hacking', 'seguridad', 'kali', 'linux', 'pentesting', 'pentest', 'ctf', 'vulnerabilidad', 'exploit', 'malware', 'virus', 'firewall', 'ethical', 'ciberseguridad', 'security', 'owasp', 'burpsuite', 'metasploit', 'nmap', 'wireshark']
+        },
+        {
+            name: 'DevOps',
+            slug: 'devops',
+            icon: 'GitBranch',
+            keywords: ['docker', 'kubernetes', 'k8s', 'ci/cd', 'jenkins', 'github actions', 'gitlab', 'terraform', 'ansible', 'aws', 'azure', 'gcp', 'cloud', 'devops', 'deploy', 'deployment', 'nginx', 'apache', 'linux', 'bash', 'shell', 'vercel', 'netlify']
+        },
+        {
+            name: 'Bases de Datos',
+            slug: 'bases-de-datos',
+            icon: 'Database',
+            keywords: ['sql', 'mysql', 'postgresql', 'postgres', 'mongodb', 'redis', 'sqlite', 'oracle', 'database', 'base de datos', 'prisma', 'orm', 'nosql', 'firebase', 'supabase', 'dbeaver', 'consulta', 'query', 'normalizacion']
+        },
+        {
+            name: 'Inteligencia Artificial',
+            slug: 'inteligencia-artificial',
+            icon: 'Brain',
+            keywords: ['gpt', 'chatgpt', 'openai', 'claude', 'llm', 'ia', 'ai', 'inteligencia artificial', 'machine learning', 'ml', 'deep learning', 'neural', 'tensorflow', 'pytorch', 'midjourney', 'stable diffusion', 'copilot', 'cursor', 'gemini', 'bot', 'prompt']
+        },
+        {
+            name: 'Diseño UI/UX',
+            slug: 'diseno-ui-ux',
+            icon: 'Palette',
+            keywords: ['figma', 'diseño', 'design', 'ui', 'ux', 'prototipo', 'wireframe', 'mockup', 'sketch', 'adobe xd', 'canva', 'photoshop', 'illustrator', 'accesibilidad', 'usabilidad', 'color', 'tipografia', 'iconos']
+        },
+        {
+            name: 'Sistemas',
+            slug: 'sistemas',
+            icon: 'Cpu',
+            keywords: ['windows', 'linux', 'ubuntu', 'debian', 'macos', 'sistema operativo', 'terminal', 'cmd', 'powershell', 'virtualbox', 'vmware', 'redes', 'networking', 'tcp', 'ip', 'dns', 'dhcp', 'hardware', 'servidor']
+        },
     ];
 
     for (const category of categories) {
         await prisma.category.upsert({
             where: { slug: category.slug },
-            update: category,
+            update: { keywords: category.keywords },
             create: category,
         });
     }
-    console.log(`✅ Created ${categories.length} categories`);
+    console.log(`✅ Created ${categories.length} categories with keywords`);
 
     console.log('🎉 Seed completed successfully!');
 }

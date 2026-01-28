@@ -57,7 +57,10 @@ function NewResourceForm() {
 
     // Estado para la detección automática
     const [analyzing, setAnalyzing] = useState(false);
-    const [detectedCategory, setDetectedCategory] = useState<string | null>(null);
+    const [detectionFeedback, setDetectionFeedback] = useState<{
+        type: 'success' | 'warning' | null;
+        message: string;
+    }>({ type: null, message: '' });
 
     useEffect(() => {
         fetch('/api/subjects')
@@ -86,7 +89,7 @@ function NewResourceForm() {
         }
 
         setAnalyzing(true);
-        setDetectedCategory(null);
+        setDetectionFeedback({ type: null, message: '' });
 
         try {
             const result = await analyzeUrl(url);
@@ -96,7 +99,10 @@ function NewResourceForm() {
                 if (!selectedCategories.includes(result.categoryId)) {
                     setSelectedCategories(prev => [...prev, result.categoryId!]);
                 }
-                setDetectedCategory(result.categoryName || null);
+                setDetectionFeedback({
+                    type: 'success',
+                    message: `¡Tema detectado: ${result.categoryName}!`
+                });
 
                 // Auto-rellenar título si está vacío
                 if (!title && result.title) {
@@ -107,11 +113,27 @@ function NewResourceForm() {
                 if (!description && result.description) {
                     setDescription(result.description.substring(0, 300));
                 }
-            } else if (!result.success && result.error) {
-                console.warn('Análisis fallido:', result.error);
+            } else {
+                // No se encontró categoría - mensaje suave, no es un error
+                setDetectionFeedback({
+                    type: 'warning',
+                    message: 'No se detectó el tema automáticamente. Selecciona uno manual.'
+                });
+
+                // Aún así podemos auto-rellenar título/descripción
+                if (!title && result.title) {
+                    setTitle(result.title);
+                }
+                if (!description && result.description) {
+                    setDescription(result.description.substring(0, 300));
+                }
             }
         } catch (err) {
             console.error('Error en auto-detección:', err);
+            setDetectionFeedback({
+                type: 'warning',
+                message: 'Error al analizar. Selecciona el tema manualmente.'
+            });
         } finally {
             setAnalyzing(false);
         }
@@ -175,8 +197,8 @@ function NewResourceForm() {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
-                <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
                     {error && (
                         <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400">
                             <AlertCircle className="w-5 h-5 flex-shrink-0" />
@@ -195,70 +217,74 @@ function NewResourceForm() {
                                     key={rt.value}
                                     type="button"
                                     onClick={() => setType(rt.value as ResourceType)}
-                                    className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition-all ${type === rt.value
+                                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 rounded-lg border transition-all touch-manipulation active:scale-[0.98] ${type === rt.value
                                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
                                         : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300'
                                         }`}
                                 >
-                                    <rt.icon className="w-4 h-4" />
-                                    <span className="text-sm font-medium">{rt.label}</span>
+                                    <rt.icon className="w-4 h-4 flex-shrink-0" />
+                                    <span className="text-sm font-medium truncate">{rt.label}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* URL (for YouTube/Link) - CON AUTO-DETECT */}
+                    {/* URL (for YouTube/Link) - MOBILE FIRST DESIGN */}
                     {needsUrl && (
                         <div>
                             <label htmlFor="url" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                 {type === 'VIDEO_YOUTUBE' ? 'URL del vídeo de YouTube' : 'URL del enlace'}
                             </label>
-                            <div className="flex gap-2">
+
+                            {/* Input + Button: Stacked on mobile, side-by-side on desktop */}
+                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                 <input
                                     id="url"
                                     type="url"
                                     value={url}
                                     onChange={(e) => {
                                         setUrl(e.target.value);
-                                        setDetectedCategory(null);
+                                        setDetectionFeedback({ type: null, message: '' });
                                     }}
-                                    onBlur={() => {
-                                        // Auto-detectar al perder el foco si hay URL válida
-                                        if (url && url.startsWith('http') && categories.length > 0) {
-                                            handleAutoDetect();
-                                        }
-                                    }}
-                                    className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                                     placeholder={type === 'VIDEO_YOUTUBE' ? 'https://www.youtube.com/watch?v=...' : 'https://example.com'}
                                     required
                                 />
+
+                                {/* Detect Button - FULL WIDTH on mobile, auto on desktop */}
                                 <button
                                     type="button"
                                     onClick={handleAutoDetect}
                                     disabled={!url || !url.startsWith('http') || analyzing}
-                                    className="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 flex-shrink-0"
+                                    className="w-full sm:w-auto h-12 sm:h-auto px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98] flex-shrink-0"
                                     title="Detectar categoría automáticamente"
                                 >
                                     {analyzing ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            <span>Analizando...</span>
+                                        </>
                                     ) : (
-                                        <Sparkles className="w-4 h-4" />
+                                        <>
+                                            <Sparkles className="w-5 h-5" />
+                                            <span>Detectar tema</span>
+                                        </>
                                     )}
-                                    <span className="hidden sm:inline">Detectar</span>
                                 </button>
                             </div>
 
-                            {/* Feedback de detección */}
-                            {analyzing && (
-                                <p className="mt-2 text-sm text-purple-600 dark:text-purple-400 flex items-center gap-2">
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                    Analizando URL...
-                                </p>
-                            )}
-                            {detectedCategory && !analyzing && (
-                                <p className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
-                                    <Sparkles className="w-3 h-3" />
-                                    Categoría detectada: <strong>{detectedCategory}</strong>
+                            {/* Detection Feedback */}
+                            {detectionFeedback.type && (
+                                <p className={`mt-3 text-sm flex items-center gap-2 ${detectionFeedback.type === 'success'
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : 'text-amber-600 dark:text-amber-400'
+                                    }`}>
+                                    {detectionFeedback.type === 'success' ? (
+                                        <Sparkles className="w-4 h-4 flex-shrink-0" />
+                                    ) : (
+                                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                    )}
+                                    {detectionFeedback.message}
                                 </p>
                             )}
                         </div>
@@ -315,7 +341,7 @@ function NewResourceForm() {
                                     <button
                                         type="button"
                                         onClick={() => setFilePath('')}
-                                        className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600"
+                                        className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 touch-manipulation"
                                     >
                                         <X className="w-5 h-5 text-slate-500" />
                                     </button>
@@ -383,13 +409,13 @@ function NewResourceForm() {
                         </div>
                     )}
 
-                    {/* Categories (optional) */}
+                    {/* Categories (optional) - Touch-friendly chips */}
                     {categories.length > 0 && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                 Categorías temáticas (opcional)
                             </label>
-                            <div className="flex flex-wrap gap-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg max-h-32 overflow-y-auto">
+                            <div className="flex flex-wrap gap-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg max-h-40 overflow-y-auto">
                                 {categories.map((category) => {
                                     const isSelected = selectedCategories.includes(category.id);
                                     return (
@@ -401,12 +427,12 @@ function NewResourceForm() {
                                                     ? prev.filter((c) => c !== category.id)
                                                     : [...prev, category.id]
                                             )}
-                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${isSelected
-                                                ? 'bg-blue-600 text-white'
+                                            className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-medium transition-all touch-manipulation active:scale-95 ${isSelected
+                                                ? 'bg-blue-600 text-white shadow-sm'
                                                 : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40'
                                                 }`}
                                         >
-                                            {isSelected ? <Check className="w-3.5 h-3.5" /> : <Hash className="w-3.5 h-3.5" />}
+                                            {isSelected ? <Check className="w-4 h-4" /> : <Hash className="w-4 h-4" />}
                                             {category.name}
                                         </button>
                                     );
@@ -415,18 +441,18 @@ function NewResourceForm() {
                         </div>
                     )}
 
-                    {/* Submit buttons */}
-                    <div className="flex gap-4 pt-4">
+                    {/* Submit buttons - Mobile friendly */}
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4">
                         <Link
                             href="/dashboard/resources"
-                            className="flex-1 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                            className="w-full sm:flex-1 py-3 text-center border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors touch-manipulation"
                         >
                             Cancelar
                         </Link>
                         <button
                             type="submit"
                             disabled={loading || uploading || (needsFile && !filePath)}
-                            className="flex-1 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full sm:flex-1 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation active:scale-[0.98]"
                         >
                             {loading ? (
                                 <div className="w-5 h-5 mx-auto border-2 border-white/30 border-t-white rounded-full animate-spin" />

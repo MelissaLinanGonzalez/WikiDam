@@ -71,6 +71,7 @@ model Category {
   name      String     @unique
   slug      String     @unique
   icon      String?
+  keywords  String[]   @default([])
   createdAt DateTime   @default(now())
   
   resources Resource[]
