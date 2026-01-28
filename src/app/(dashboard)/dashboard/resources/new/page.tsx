@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Upload, AlertCircle, X, Youtube, Video, Image, LinkIcon, Hash, Check } from 'lucide-react';
+import { ArrowLeft, FileText, AlertCircle, X, Youtube, Video, Image, LinkIcon, Hash, Check, Sparkles, Loader2 } from 'lucide-react';
 import { ResourceType } from '@prisma/client';
 import { UploadButton } from '@/lib/uploadthing';
 import { getAllCategories } from '@/actions/categories';
+import { analyzeUrl } from '@/actions/analyze';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,11 +36,9 @@ const resourceTypes = [
     { value: 'LINK', label: 'Enlace', icon: LinkIcon },
 ];
 
-// 1. Convertimos tu componente principal en un sub-componente interno
 function NewResourceForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [youtubers, setYoutubers] = useState<Youtuber[]>([]);
@@ -51,11 +50,14 @@ function NewResourceForm() {
     const [url, setUrl] = useState('');
     const [subjectId, setSubjectId] = useState(searchParams.get('subjectId') || '');
     const [youtuberId, setYoutuberId] = useState('');
-    const [file, setFile] = useState<File | null>(null);
     const [filePath, setFilePath] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
+
+    // Estado para la detección automática
+    const [analyzing, setAnalyzing] = useState(false);
+    const [detectedCategory, setDetectedCategory] = useState<string | null>(null);
 
     useEffect(() => {
         fetch('/api/subjects')
@@ -77,7 +79,43 @@ function NewResourceForm() {
         }
     }, [subjectId]);
 
+    // Función para detectar categoría automáticamente
+    const handleAutoDetect = async () => {
+        if (!url || !url.startsWith('http')) {
+            return;
+        }
 
+        setAnalyzing(true);
+        setDetectedCategory(null);
+
+        try {
+            const result = await analyzeUrl(url);
+
+            if (result.success && result.categoryId) {
+                // Añadir la categoría detectada si no está ya seleccionada
+                if (!selectedCategories.includes(result.categoryId)) {
+                    setSelectedCategories(prev => [...prev, result.categoryId!]);
+                }
+                setDetectedCategory(result.categoryName || null);
+
+                // Auto-rellenar título si está vacío
+                if (!title && result.title) {
+                    setTitle(result.title);
+                }
+
+                // Auto-rellenar descripción si está vacía
+                if (!description && result.description) {
+                    setDescription(result.description.substring(0, 300));
+                }
+            } else if (!result.success && result.error) {
+                console.warn('Análisis fallido:', result.error);
+            }
+        } catch (err) {
+            console.error('Error en auto-detección:', err);
+        } finally {
+            setAnalyzing(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -169,6 +207,63 @@ function NewResourceForm() {
                         </div>
                     </div>
 
+                    {/* URL (for YouTube/Link) - CON AUTO-DETECT */}
+                    {needsUrl && (
+                        <div>
+                            <label htmlFor="url" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                {type === 'VIDEO_YOUTUBE' ? 'URL del vídeo de YouTube' : 'URL del enlace'}
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    id="url"
+                                    type="url"
+                                    value={url}
+                                    onChange={(e) => {
+                                        setUrl(e.target.value);
+                                        setDetectedCategory(null);
+                                    }}
+                                    onBlur={() => {
+                                        // Auto-detectar al perder el foco si hay URL válida
+                                        if (url && url.startsWith('http') && categories.length > 0) {
+                                            handleAutoDetect();
+                                        }
+                                    }}
+                                    className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                    placeholder={type === 'VIDEO_YOUTUBE' ? 'https://www.youtube.com/watch?v=...' : 'https://example.com'}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleAutoDetect}
+                                    disabled={!url || !url.startsWith('http') || analyzing}
+                                    className="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 flex-shrink-0"
+                                    title="Detectar categoría automáticamente"
+                                >
+                                    {analyzing ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <Sparkles className="w-4 h-4" />
+                                    )}
+                                    <span className="hidden sm:inline">Detectar</span>
+                                </button>
+                            </div>
+
+                            {/* Feedback de detección */}
+                            {analyzing && (
+                                <p className="mt-2 text-sm text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    Analizando URL...
+                                </p>
+                            )}
+                            {detectedCategory && !analyzing && (
+                                <p className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+                                    <Sparkles className="w-3 h-3" />
+                                    Categoría detectada: <strong>{detectedCategory}</strong>
+                                </p>
+                            )}
+                        </div>
+                    )}
+
                     {/* Title */}
                     <div>
                         <label htmlFor="title" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -200,24 +295,6 @@ function NewResourceForm() {
                         />
                     </div>
 
-                    {/* URL (for YouTube/Link) */}
-                    {needsUrl && (
-                        <div>
-                            <label htmlFor="url" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                {type === 'VIDEO_YOUTUBE' ? 'URL del vídeo de YouTube' : 'URL del enlace'}
-                            </label>
-                            <input
-                                id="url"
-                                type="url"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                placeholder={type === 'VIDEO_YOUTUBE' ? 'https://www.youtube.com/watch?v=...' : 'https://example.com'}
-                                required
-                            />
-                        </div>
-                    )}
-
                     {/* File upload (for file types) */}
                     {needsFile && (
                         <div>
@@ -237,10 +314,7 @@ function NewResourceForm() {
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            setFilePath('');
-                                            setFile(null);
-                                        }}
+                                        onClick={() => setFilePath('')}
                                         className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600"
                                     >
                                         <X className="w-5 h-5 text-slate-500" />
@@ -367,7 +441,6 @@ function NewResourceForm() {
     );
 }
 
-// 2. Exportamos el componente envuelto en Suspense
 export default function NewResourcePage() {
     return (
         <Suspense fallback={<div className="p-8 text-center">Cargando formulario...</div>}>
